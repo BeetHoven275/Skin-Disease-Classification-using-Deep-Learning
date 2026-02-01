@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Skin AI — Lesion Classifier</title>
+  <style>
+    :root{
+      --bg1:#0b1020; --bg2:#0b1a2e;
+      --card: rgba(255,255,255,.08);
+      --card2: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.14);
+      --text:#eef3ff; --muted: rgba(238,243,255,.72);
+      --accent:#7c5cff; --accent2:#2ee9a6;
+      --danger:#ff4d6d; --warn:#ffcc66;
+      --shadow: 0 20px 60px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; min-height:100vh; color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:
+        radial-gradient(1200px 700px at 10% 10%, rgba(124,92,255,.35), transparent 55%),
+        radial-gradient(1000px 600px at 90% 20%, rgba(46,233,166,.22), transparent 55%),
+        radial-gradient(900px 500px at 40% 95%, rgba(255,77,109,.18), transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow-x:hidden;
+    }
+    .wrap{ max-width:1050px; margin:0 auto; padding:40px 18px 28px; }
+    header{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:18px;
+      margin-bottom:18px;
+    }
+    .brand{
+      display:flex; gap:14px; align-items:center;
+    }
+    .logo{
+      width:44px; height:44px; border-radius:14px;
+      background: linear-gradient(135deg, rgba(124,92,255,1), rgba(46,233,166,1));
+      box-shadow: 0 12px 26px rgba(124,92,255,.25);
+      position:relative;
+    }
+    .logo:after{
+      content:""; position:absolute; inset:9px; border-radius:12px;
+      background: rgba(11,16,32,.45);
+      border:1px solid rgba(255,255,255,.18);
+      backdrop-filter: blur(6px);
+    }
+    h1{ margin:0; font-size:28px; letter-spacing:.2px; }
+    .subtitle{ margin-top:6px; color:var(--muted); line-height:1.45; font-size:14.5px; max-width:620px; }
+    .byline{
+      margin-top:10px;
+      display:inline-flex; gap:8px; align-items:center;
+      padding:8px 12px; border-radius:999px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.06);
+      color: rgba(238,243,255,.9);
+      font-size:13px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.22);
+      white-space:nowrap;
+    }
+    .pill{
+      font-size:12px; padding:6px 10px; border-radius:999px;
+      border:1px solid var(--stroke); background: rgba(255,255,255,.05);
+      color: var(--muted);
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.25fr .95fr;
+      gap:18px;
+      margin-top:18px;
+    }
+    @media (max-width: 900px){
+      .grid{ grid-template-columns: 1fr; }
+      header{ flex-direction:column; }
+      .byline{ align-self:flex-start; }
+    }
+    .card{
+      background: linear-gradient(180deg, var(--card), var(--card2));
+      border:1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding:18px;
+      position:relative;
+      overflow:hidden;
+    }
+    .card:before{
+      content:""; position:absolute; inset:-2px;
+      background: radial-gradient(700px 200px at 10% 0%, rgba(124,92,255,.20), transparent 60%),
+                  radial-gradient(600px 220px at 90% 10%, rgba(46,233,166,.16), transparent 60%);
+      pointer-events:none;
+    }
+    .card > *{ position:relative; }
+    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .upload{
+      display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+      padding:14px; border-radius: 16px;
+      border:1px dashed rgba(255,255,255,.22);
+      background: rgba(255,255,255,.04);
+    }
+    input[type="file"]{
+      max-width: 420px;
+      color: rgba(238,243,255,.9);
+    }
+    .btn{
+      appearance:none; border:0; cursor:pointer;
+      padding:12px 14px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(124,92,255,1), rgba(46,233,166,1));
+      color:#081024; font-weight:700;
+      box-shadow: 0 16px 30px rgba(124,92,255,.22);
+      transition: transform .12s ease, filter .12s ease;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.secondary{
+      background: rgba(255,255,255,.08);
+      border:1px solid var(--stroke);
+      color: rgba(238,243,255,.9);
+      box-shadow:none;
+    }
+    .hint{ color: var(--muted); font-size:13px; line-height:1.4; }
+    .preview{
+      width:100%;
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.03);
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height: 230px;
+    }
+    .preview img{ width:100%; height:100%; object-fit: cover; display:none; }
+    .preview .ph{
+      padding:16px; text-align:center; color: var(--muted); font-size:13px;
+    }
+
+    .section-title{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; margin-bottom:10px;
+    }
+    .section-title h2{ margin:0; font-size:16px; letter-spacing:.2px; }
+    .status{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border-radius: 999px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      font-size:12.5px;
+    }
+    .dot{ width:8px; height:8px; border-radius:999px; background: rgba(255,255,255,.35); }
+    .dot.ok{ background: rgba(46,233,166,.9); }
+    .dot.err{ background: rgba(255,77,109,.9); }
+    .dot.run{ background: rgba(255,204,102,.95); }
+
+    .results{
+      display:grid;
+      gap:10px;
+      margin-top: 12px;
+    }
+    .bar{
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      border-radius: 14px;
+      padding:12px;
+    }
+    .bar .top{ display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    .label{ font-weight:700; font-size:13.5px; }
+    .prob{ color: var(--muted); font-size:13px; font-variant-numeric: tabular-nums; }
+    .track{
+      margin-top:10px;
+      height:10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .fill{
+      height:100%;
+      width:0%;
+      background: linear-gradient(90deg, rgba(124,92,255,1), rgba(46,233,166,1));
+      border-radius: 999px;
+      transition: width .35s ease;
+    }
+    .advice{
+      margin-top: 12px;
+      border-radius: 16px;
+      padding: 12px 12px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.04);
+      color: rgba(238,243,255,.88);
+      line-height:1.5;
+      font-size: 13.5px;
+    }
+    .meta{
+      margin-top: 12px;
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+    .badge{
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      display:inline-flex; gap:8px; align-items:center;
+    }
+    footer{
+      margin-top: 18px;
+      color: rgba(238,243,255,.55);
+      font-size: 12px;
+      text-align:center;
+    }
+    a{ color: rgba(46,233,166,.95); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Skin AI — Lesion Classifier</h1>
+          <div class="subtitle">
+            Upload a skin lesion image to get Top-3 class probabilities, a simple triage message,
+            and an optional melanoma probability. <b>This is not a diagnosis.</b>
+          </div>
+          <div class="byline">
+            Made by <b>Eng. Kirolles Ezzat</b>
+            <span class="pill">HAM10000 • ResNet18</span>
+          </div>
+        </div>
+      </div>
+      <div class="pill">API: <span id="apiState">/predict</span></div>
+    </header>
+
+    <div class="grid">
+      <!-- Left: Upload + Preview -->
+      <section class="card">
+        <div class="section-title">
+          <h2>1) Upload image</h2>
+          <span class="status" id="status"><span class="dot" id="dot"></span><span id="statusTxt">Idle</span></span>
+        </div>
+
+        <div class="upload">
+          <input id="file" type="file" accept="image/*"/>
+          <button class="btn" id="btn">Predict</button>
+          <button class="btn secondary" id="clear">Clear</button>
+          <div class="hint">Tip: use a clear, well-lit photo. Supported: JPG/PNG. Results may vary with lighting and focus.</div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="preview" id="preview">
+          <div class="ph" id="ph">
+            <div style="font-weight:700; color: rgba(238,243,255,.86)">No image selected</div>
+            <div style="margin-top:6px">Choose an image to preview it here.</div>
+          </div>
+          <img id="img" alt="preview"/>
+        </div>
+
+        <div class="meta">
+          <span class="badge">⚠️ Not medical advice</span>
+          <span class="badge">🔒 Runs on your backend</span>
+          <span class="badge">📊 Outputs probabilities</span>
+        </div>
+      </section>
+
+      <!-- Right: Results -->
+      <section class="card">
+        <div class="section-title">
+          <h2>2) Results</h2>
+          <span class="pill" id="latency">—</span>
+        </div>
+
+        <div class="results" id="results"></div>
+
+        <div class="advice" id="advice" style="display:none"></div>
+
+        <div class="meta" id="melBox" style="display:none">
+          <span class="badge">🧪 Melanoma probability: <b id="melProb">—</b></span>
+          <span class="badge">🆔 Request: <span id="reqId">—</span></span>
+        </div>
+
+        <div class="hint" style="margin-top:12px">
+          If the lesion is new, changing, bleeding, or painful, consider seeing a dermatologist.
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      Demo UI for Skin Disease Classification • Built with FastAPI • © <span id="year"></span> Eng. Kirolles Ezzat
+    </footer>
+  </div>
+
+<script>
+  const fileEl = document.getElementById("file");
+  const imgEl = document.getElementById("img");
+  const phEl = document.getElementById("ph");
+  const btn = document.getElementById("btn");
+  const clearBtn = document.getElementById("clear");
+
+  const statusTxt = document.getElementById("statusTxt");
+  const dot = document.getElementById("dot");
+  const resultsEl = document.getElementById("results");
+  const adviceEl = document.getElementById("advice");
+  const melBox = document.getElementById("melBox");
+  const melProbEl = document.getElementById("melProb");
+  const reqIdEl = document.getElementById("reqId");
+  const latencyEl = document.getElementById("latency");
+
+  document.getElementById("year").textContent = new Date().getFullYear();
+
+  function setStatus(type, text){
+    statusTxt.textContent = text;
+    dot.className = "dot";
+    if(type === "ok") dot.classList.add("ok");
+    else if(type === "err") dot.classList.add("err");
+    else if(type === "run") dot.classList.add("run");
+  }
+
+  function prettyLabel(s){
+    if(!s) return "";
+    return s.replaceAll("_"," ").replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function renderResults(top3){
+    resultsEl.innerHTML = "";
+    (top3 || []).forEach((item) => {
+      const label = prettyLabel(item.label);
+      const prob = (item.prob * 100).toFixed(2) + "%";
+
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      bar.innerHTML = `
+        <div class="top">
+          <div class="label">${label}</div>
+          <div class="prob">${prob}</div>
+        </div>
+        <div class="track"><div class="fill"></div></div>
+      `;
+      resultsEl.appendChild(bar);
+
+      const fill = bar.querySelector(".fill");
+      requestAnimationFrame(() => { fill.style.width = Math.min(100, item.prob * 100) + "%"; });
+    });
+
+    if((top3 || []).length === 0){
+      resultsEl.innerHTML = `<div class="hint">No results yet. Upload an image and click Predict.</div>`;
+    }
+  }
+
+  function clearUI(){
+    fileEl.value = "";
+    imgEl.style.display = "none";
+    imgEl.src = "";
+    phEl.style.display = "block";
+    resultsEl.innerHTML = "";
+    adviceEl.style.display = "none";
+    melBox.style.display = "none";
+    latencyEl.textContent = "—";
+    setStatus("", "Idle");
+  }
+
+  fileEl.addEventListener("change", () => {
+    const f = fileEl.files[0];
+    if(!f) return clearUI();
+    const url = URL.createObjectURL(f);
+    imgEl.src = url;
+    imgEl.onload = () => URL.revokeObjectURL(url);
+    imgEl.style.display = "block";
+    phEl.style.display = "none";
+  });
+
+  clearBtn.addEventListener("click", clearUI);
+
+  btn.addEventListener("click", async () => {
+    const f = fileEl.files[0];
+    if(!f){ alert("Choose an image first."); return; }
+
+    setStatus("run", "Running inference...");
+    adviceEl.style.display = "none";
+    melBox.style.display = "none";
+    latencyEl.textContent = "—";
+
+    const form = new FormData();
+    form.append("file", f);
+
+    const t0 = performance.now();
+    try{
+      const r = await fetch("predict", { method: "POST", body: form });
+      const t1 = performance.now();
+      latencyEl.textContent = `Latency: ${(t1 - t0).toFixed(0)} ms`;
+
+      const js = await r.json();
+      if(!r.ok){
+        setStatus("err", "Error");
+        renderResults([]);
+        adviceEl.style.display = "block";
+        adviceEl.textContent = js?.detail || JSON.stringify(js);
+        return;
+      }
+
+      setStatus("ok", "Done");
+      renderResults(js.top3 || js.top || js.predictions || []);
+      if(js.advice){
+        adviceEl.style.display = "block";
+        adviceEl.textContent = js.advice;
+      }
+      if(js.melanoma_probability !== undefined && js.melanoma_probability !== null){
+        melBox.style.display = "flex";
+        melProbEl.textContent = (js.melanoma_probability * 100).toFixed(2) + "%";
+      }else{
+        melBox.style.display = "none";
+      }
+      reqIdEl.textContent = js.upload_id || js.request_id || "—";
+
+    }catch(e){
+      setStatus("err", "Network error");
+      renderResults([]);
+      adviceEl.style.display = "block";
+      adviceEl.textContent = String(e);
+    }
+  });
+
+  // initial
+  renderResults([]);
+  setStatus("", "Idle");
+</script>
+</body>
+</html>
